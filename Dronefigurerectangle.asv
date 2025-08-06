@@ -28,18 +28,30 @@ r = [100; 100];
     x2 = X(3,i); y2 = X(4,i);
     x3 = X(5,i); y3 = X(6,i);
     
-    %pf2 = [1 + cos(0.25 * t(i)); -2.5 + sin(0.25 * t(i))];
-    pf3 = [1 - cos(0.25 * t(i)); 2.5 + sin(0.25 * t(i))];
-    pf2 = [1 + cos(0.25 * t(i)); sin(0.5*t(i))];
-    %pf2 = [t(i)+2*(cos(t(i)))^2;t(i)];
-   
-    u_dash = [...
-        (r(1) + pf2(1)) - x1;%relative distance + formation
-        (r(2) + pf2(2)) - y1;
-            x1  - x2;
-            y1 - y2 ;
-           (x1) - x3 ;
-           (y1) - y3];
+    omega = 10;                % angular speed (rad/s)
+    theta = omega * t(i);       % rotation angle at time t(i)
+
+    % 2D rotation matrix
+    R = [cos(theta), -sin(theta); sin(theta), cos(theta)];
+
+    % Triangle formation in body frame
+    offset1 = [0; 2];               % Top vertex
+    offset2 = [-sqrt(3); -1];       % Bottom left vertex
+    offset3 = [sqrt(3); -1];        % Bottom right vertex
+
+    % Rotate and translate to get desired positions
+    p1d = r + R * offset1;   % Desired position of Drone 1
+    p2d = r + R * offset2;   % Desired position of Drone 2
+    p3d = r + R * offset3;   % Desired position of Drone 3
+
+    u_dash = [ ...
+        p1d(1) - x1;
+        p1d(2) - y1;
+        p2d(1) - x2;
+        p2d(2) - y2;
+        p3d(1) - x3;
+        p3d(2) - y3];
+
 
     udot=2*u_dash - u(:,i);
     u(:,i+1) = u(:,i) + dt * udot;

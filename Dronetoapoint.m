@@ -16,12 +16,20 @@ N = length(t);
 
 % Initial states: [x1; y1; x1dot; y1dot; x2; y2; x2dot; y2dot; x3; y3; x3dot; y3dot]
 X = zeros(6, N);
+<<<<<<< HEAD
 X(:,1) = [100; 90;-480; 208;-320; 192];
+=======
+X(:,1) = [10; 10;-4; 20;-32; 12];
+>>>>>>> 050c277ea17316a41e4306b7d7e7542d3cfb008c
 
 u = zeros(6, N);
 udot = zeros(6, 1);
 
+<<<<<<< HEAD
 r = [10; 10];
+=======
+r = [100; 100];
+>>>>>>> 050c277ea17316a41e4306b7d7e7542d3cfb008c
 
  for i=1:N-1
     x1 = X(1,i); y1 = X(2,i);
