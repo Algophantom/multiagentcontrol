@@ -14,7 +14,15 @@ T = 100; dt = 0.01;
 t = 0:dt:T;
 N = length(t);
 
+<<<<<<< HEAD
 
+=======
+<<<<<<< HEAD
+
+=======
+% Initial states: [x1; y1; x1dot; y1dot; x2; y2; x2dot; y2dot; x3; y3; x3dot; y3dot]
+>>>>>>> 050c277ea17316a41e4306b7d7e7542d3cfb008c
+>>>>>>> efd2772771bf1caa9d5c50f1b0d2fccfb5a62e78
 X = zeros(6, N);
 X(:,1) = [100; 100;98; 100;102; 100];
 
