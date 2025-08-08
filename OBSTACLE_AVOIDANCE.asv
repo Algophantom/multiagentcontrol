@@ -1,0 +1,112 @@
+clc; clear; close all;
+
+%% Parameters
+T = 600; dt = 0.05;
+t = 0:dt:T;
+N = length(t);
+
+m = 10;         % mass of robot
+k = 1;         % spring stiffness
+r_obs = 2.5;   % obstacle radius
+A_transfer = tf(k/m, [1 0]);  % A(s) = k/(m*s)
+
+K_form = 0.5;  % feedback gain to pull back to reference trajectory
+
+%% Trajectory - Circular
+R = 10;  % radius of circular trajectory
+w = 0.1; % angular velocity
+
+x_ref = R * cos(w * t);
+y_ref = R * sin(w * t);
+vx_ref = -R * w * sin(w * t);
+vy_ref =  R * w * cos(w * t);
+
+%% Obstacle Motion (sinusoidal path)
+obs_x = 4 + sin(0.5 * t); 
+obs_y = 8 + cos(0.5 * t);
+obstacle_path = [obs_x; obs_y];
+
+%% Initialize robot state
+pos = [R; 0];       % starting at (R, 0)
+vel = [0; R*w];     % initial velocity
+pos_hist = pos;
+
+%% Avoidance system memory
+avoid_vel = [0;0];
+avoid_tf = c2d(A_transfer, dt);  % Discretize A(s)
+
+avoid_state = [0;0];             % Integrator state
+%states of the avoidance transfer function
+
+%% Simulation Loop
+for i = 2:N
+    obstacle = obstacle_path(:,i);
+    ref_pos = [x_ref(i); y_ref(i)];
+    ref_vel = [vx_ref(i); vy_ref(i)];
+    heading = ref_vel / norm(ref_vel);%unit vector in the reference velo
+    %city direction
+
+    % Vector from drone to obstacle
+    ac = obstacle - pos;% vector from drone to obstacle center
+    proj_len = dot(ac, heading);% scalar projection of obstacle on the ahead vector
+    proj_v = proj_len * heading;%projection vector = scalar projection * ahead
+    closest = pos + proj_v;%closest vector whose mag is the closest point
+    %between obstacle and path
+
+    av = closest - obstacle;%vector from obstacle to the closest point
+    d = norm(av);%mag of velocity vector
+
+    
+    if d < r_obs %inside the obstacle circle
+        overlap = (r_obs - d) * (av / d);  
+        avoid_state = avoid_state + dt * (k/m) * overlap; 
+        avoid_vel = avoid_state;
+    else
+        avoid_vel = [0;0];
+    end
+
+    
+    formation_corr = K_form * (ref_pos - pos);
+
+    
+    vel = ref_vel + avoid_vel + formation_corr;
+
+    
+    pos = pos + vel * dt;
+
+    
+    pos_hist(:, end+1) = pos;
+end
+
+%% Animation
+figure;
+axis equal;
+xlim([min(x_ref)-5, max(x_ref)+5]);
+ylim([min(y_ref)-5, max(y_ref)+5]);
+grid on;
+xlabel('X'); ylabel('Y');
+title('Animated Drone Obstacle Avoidance via NI System');
+hold on;
+
+plot(x_ref, y_ref, 'k--', 'LineWidth', 1.2);
+
+h_drone = plot(pos_hist(1,1), pos_hist(2,1), 'bo', 'MarkerFaceColor', 'b');
+h_obs = plot(obs_x(1), obs_y(1), 'ro', 'MarkerFaceColor', 'r');
+h_circle = rectangle('Position',[obs_x(1)-r_obs, obs_y(1)-r_obs, 2*r_obs, 2*r_obs],...
+    'Curvature',[1,1], 'EdgeColor','r');
+
+trail = animatedline('Color', 'b', 'LineWidth', 2);
+
+for i = 1:1:N
+    % Update drone
+    set(h_drone, 'XData', pos_hist(1,i), 'YData', pos_hist(2,i));
+    addpoints(trail, pos_hist(1,i), pos_hist(2,i));
+
+    % Update obstacle
+    set(h_obs, 'XData', obs_x(i), 'YData', obs_y(i));
+    set(h_circle, 'Position', [obs_x(i)-r_obs, obs_y(i)-r_obs, 2*r_obs, 2*r_obs]);
+
+    drawnow;
+end
+
+legend('Reference Path', 'Drone', 'Obstacle');

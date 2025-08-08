@@ -1,0 +1,158 @@
+%% NI Consensus Controller + Obstacle Avoidance 
+clear; clc;
+
+T = 100; dt = 0.01;
+t = 0:dt:T;
+N = length(t);
+
+% State vector: [x1; y1; x2; y2; x3; y3]
+X = zeros(6, N);
+X(:,1) = [102; 102; 102; 102; 99; 90];
+
+% Formation velocity states
+u = zeros(6, N);
+u_form = zeros(6, N);
+udot = zeros(6, 1);
+
+% Avoidance velocity states per agent
+avoid_state1 = [0; 0];
+avoid_state2 = [0; 0];
+avoid_state3 = [0; 0];
+
+% Parameters
+r = [100; 100];     % reference position for leader
+r_obs = 0.1;        % obstacle radius
+k = 5.0;            % virtual spring constant
+m = 1;           % "mass" for avoidance dynamics
+
+% Example obstacle path (static in this case)
+obstacle_path = repmat([100; 101], 1, N);
+
+for i = 1:N-1
+    % Current positions
+    x1 = X(1,i); y1 = X(2,i);
+    x2 = X(3,i); y2 = X(4,i);
+    x3 = X(5,i); y3 = X(6,i);
+
+    % Example formation offset for agent 1 relative to reference
+    pf2 = [cos(0.25 * t(i)); sin(0.25 * t(i))];
+
+    % --- Formation control (NI consensus output)
+    u_dash = [
+        (r(1) + pf2(1)) - x1;
+        (r(2) + pf2(2)) - y1;
+        x1 - x2;
+        y1 - y2;
+        x1 - x3;
+        y1 - y3
+    ];
+
+    udot = 2 * u_dash - u(:,i);
+    u_form(:,i+1) = u_form(:,i) + dt * udot; 
+
+    % --- Obstacle avoidance for each agent
+    obstacle_pos = obstacle_path(:,i);
+
+    % Agent 1
+    pos1 = [x1; y1];
+    ref_vel1 = u_form(1:2, i);
+    [avoid_vel1, avoid_state1] = obsavoidance(pos1, ref_vel1, obstacle_pos, r_obs, avoid_state1, k, m, dt);
+
+    % Agent 2
+    pos2 = [x2; y2];
+    ref_vel2 = u_form(3:4, i);
+    [avoid_vel2, avoid_state2] = obsavoidance(pos2, ref_vel2, obstacle_pos, r_obs, avoid_state2, k, m, dt);
+
+    % Agent 3
+    pos3 = [x3; y3];
+    ref_vel3 = u_form(5:6, i);
+    [avoid_vel3, avoid_state3] = obsavoidance(pos3, ref_vel3, obstacle_pos, r_obs, avoid_state3, k, m, dt);
+
+    % Stack avoidance velocities
+    avoid_vel = [avoid_vel1; avoid_vel2; avoid_vel3];
+
+    
+    u(:,i+1) = 5*u_form(:,i+1) + 10*avoid_vel;
+    
+    % --- Integrate positions
+    X(:,i+1) = X(:,i) + dt *  u(:,i);
+end
+
+
+
+%% Obstacle avoidance function
+function [avoid_vel, avoid_state] = obsavoidance(pos, ref_vel, obstacle_pos, r_obs, avoid_state, k, m, dt)
+  
+    heading = ref_vel / norm(ref_vel);
+
+    % Vector from UAV to obstacle
+    ac = obstacle_pos - pos;
+
+    % Scalar projection of obstacle vector onto heading
+    proj_len = dot(ac, heading);
+
+    % Projection vector
+    proj_v = proj_len * heading;
+
+    % Closest point on heading to obstacle center
+    closest = pos + proj_v;
+
+    % Vector from obstacle center to closest point
+    av = closest - obstacle_pos;
+    d = norm(av);
+
+    % If inside obstacle radius, compute avoidance
+    if d < r_obs
+        overlap = (r_obs - d) * (av / d);
+        avoid_state = avoid_state + dt * (k/m) * overlap;
+        %avoid_state = avoid_state + dt * ( -0.01*avoid_state + (k/m) * overlap );
+        avoid_vel = avoid_state;
+    else
+        avoid_vel = [0; 0];
+    end
+end
+
+%% Animation with traces
+figure;
+hold on; grid on; axis equal;
+axis([95 105 95 105]); 
+xlabel('X'); ylabel('Y');
+title('3-Agent Formation with Obstacle Avoidance');
+
+% Plot obstacle
+theta = linspace(0, 2*pi, 50);
+obs_x = obstacle_path(1,1) + r_obs*cos(theta);
+obs_y = obstacle_path(2,1) + r_obs*sin(theta);
+obs_plot = fill(obs_x, obs_y, [1 0.6 0.6], 'EdgeColor', 'r');
+
+% Moving agent markers
+agent1_plot = plot(X(1,1), X(2,1), 'bo', 'MarkerFaceColor', 'b');
+agent2_plot = plot(X(3,1), X(4,1), 'go', 'MarkerFaceColor', 'g');
+agent3_plot = plot(X(5,1), X(6,1), 'mo', 'MarkerFaceColor', 'm');
+
+% Animated traces for each agent
+trace1 = animatedline('Color','b','LineWidth',1);
+trace2 = animatedline('Color','g','LineWidth',1);
+trace3 = animatedline('Color','m','LineWidth',1);
+
+legend('Obstacle','Agent 1','Agent 2','Agent 3');
+
+% Animation loop
+for i = 1:1:N
+    % Update obstacle position if moving
+    obs_x = obstacle_path(1,i) + r_obs*cos(theta);
+    obs_y = obstacle_path(2,i) + r_obs*sin(theta);
+    set(obs_plot, 'XData', obs_x, 'YData', obs_y);
+
+    % Update agent positions (markers)
+    set(agent1_plot, 'XData', X(1,i), 'YData', X(2,i));
+    set(agent2_plot, 'XData', X(3,i), 'YData', X(4,i));
+    set(agent3_plot, 'XData', X(5,i), 'YData', X(6,i));
+
+    % Add current points to traces
+    addpoints(trace1, X(1,i), X(2,i));
+    addpoints(trace2, X(3,i), X(4,i));
+    addpoints(trace3, X(5,i), X(6,i));
+
+    drawnow;
+end
