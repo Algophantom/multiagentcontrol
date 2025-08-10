@@ -1,21 +1,13 @@
 %% NI Consensus Controller + Obstacle Avoidance 
 clear; clc;
 
-<<<<<<< HEAD
-T = 1000; dt = 0.01;
-=======
 T = 100; dt = 0.01;
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
 t = 0:dt:T;
 N = length(t);
 
 % State vector: [x1; y1; x2; y2; x3; y3]
 X = zeros(6, N);
-<<<<<<< HEAD
-X(:,1) = [102; 102; 102; 102; 103; 99];
-=======
-X(:,1) = [102; 102; 102; 102; 99; 90];
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
+X(:,1) = [102; 102; 102; 102; 09; 90];
 
 % Formation velocity states
 u = zeros(6, N);
@@ -30,20 +22,14 @@ avoid_state3 = [0; 0];
 % Parameters
 r = [100; 100];     % reference position for leader
 r_obs = 0.1;        % obstacle radius
-<<<<<<< HEAD
-k =10;            % virtual spring constant
-m = 3.5;           % "mass" for avoidance dynamics
+k = 10.0;            % virtual spring constant
+m = 10  
 
-beta_self   = 0.7;  
-beta_leader = 0.3; 
 
-=======
-k = 5.0;            % virtual spring constant
-m = 1;           % "mass" for avoidance dynamics
+ .0;            % "mass" for avoidance dynamics
 
 % Example obstacle path (static in this case)
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
-obstacle_path = repmat([100; 101], 1, N);
+obstacle_path = repmat([100; 100], 1, N);
 
 for i = 1:N-1
     % Current positions
@@ -52,7 +38,7 @@ for i = 1:N-1
     x3 = X(5,i); y3 = X(6,i);
 
     % Example formation offset for agent 1 relative to reference
-    pf2 = [cos(0.25 * t(i)); sin(0.25 * t(i))];
+    pf2 = [cos(0.25 * t(i)); sin(0.5 * t(i))];
 
     % --- Formation control (NI consensus output)
     u_dash = [
@@ -64,11 +50,7 @@ for i = 1:N-1
         y1 - y3
     ];
 
-<<<<<<< HEAD
-    udot =  u_dash - u(:,i);
-=======
     udot = 2 * u_dash - u(:,i);
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
     u_form(:,i+1) = u_form(:,i) + dt * udot; 
 
     % --- Obstacle avoidance for each agent
@@ -82,40 +64,21 @@ for i = 1:N-1
     % Agent 2
     pos2 = [x2; y2];
     ref_vel2 = u_form(3:4, i);
-<<<<<<< HEAD
-    [avoid_self2, avoid_state2] = obsavoidance(pos2, ref_vel2, obstacle_pos, r_obs, avoid_state2, k, m, dt);
-    avoid_vel2 = beta_self * avoid_self2 + beta_leader * avoid_vel1;
-
-=======
     [avoid_vel2, avoid_state2] = obsavoidance(pos2, ref_vel2, obstacle_pos, r_obs, avoid_state2, k, m, dt);
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
 
     % Agent 3
     pos3 = [x3; y3];
     ref_vel3 = u_form(5:6, i);
-<<<<<<< HEAD
-    [avoid_self3, avoid_state3] = obsavoidance(pos3, ref_vel3, obstacle_pos, r_obs, avoid_state3, k, m, dt);
-    avoid_vel3 = beta_self * avoid_self3 + beta_leader * avoid_vel1;
-
-=======
     [avoid_vel3, avoid_state3] = obsavoidance(pos3, ref_vel3, obstacle_pos, r_obs, avoid_state3, k, m, dt);
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
 
     % Stack avoidance velocities
     avoid_vel = [avoid_vel1; avoid_vel2; avoid_vel3];
 
     
-<<<<<<< HEAD
-    u(:,i+1) = u_form(:,i+1) + 10*avoid_vel;
-    
-    % --- Integrate positions
-    X(:,i+1) = X(:,i) + dt *  u(:,i+1);
-=======
-    u(:,i+1) = 5*u_form(:,i+1) + 10*avoid_vel;
+    u(:,i+1) = u_form(:,i+1) + 4*avoid_vel;
     
     % --- Integrate positions
     X(:,i+1) = X(:,i) + dt *  u(:,i);
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
 end
 
 
@@ -144,14 +107,8 @@ function [avoid_vel, avoid_state] = obsavoidance(pos, ref_vel, obstacle_pos, r_o
     % If inside obstacle radius, compute avoidance
     if d < r_obs
         overlap = (r_obs - d) * (av / d);
-<<<<<<< HEAD
-        %avoid_state = avoid_state + dt * (k/m)*overlap;
-        avoid_state = avoid_state + dt * ( -10*avoid_state + (k/m) * overlap );
-=======
         avoid_state = avoid_state + dt * (k/m) * overlap;
-        %avoid_state = avoid_state + dt * ( -0.01*avoid_state + (k/m) * overlap );
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
-        avoid_vel = avoid_state;
+        avoid_vel = 2*avoid_state;
     else
         avoid_vel = [0; 0];
     end
@@ -160,7 +117,7 @@ end
 %% Animation with traces
 figure;
 hold on; grid on; axis equal;
-axis([95 105 95 105]); 
+axis([95 105 95 105]); % adjust as needed
 xlabel('X'); ylabel('Y');
 title('3-Agent Formation with Obstacle Avoidance');
 
@@ -183,31 +140,18 @@ trace3 = animatedline('Color','m','LineWidth',1);
 legend('Obstacle','Agent 1','Agent 2','Agent 3');
 
 % Animation loop
-<<<<<<< HEAD
-for i = 1:40:N
-    
-=======
 for i = 1:1:N
     % Update obstacle position if moving
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
     obs_x = obstacle_path(1,i) + r_obs*cos(theta);
     obs_y = obstacle_path(2,i) + r_obs*sin(theta);
     set(obs_plot, 'XData', obs_x, 'YData', obs_y);
 
-<<<<<<< HEAD
-    
-=======
     % Update agent positions (markers)
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
     set(agent1_plot, 'XData', X(1,i), 'YData', X(2,i));
     set(agent2_plot, 'XData', X(3,i), 'YData', X(4,i));
     set(agent3_plot, 'XData', X(5,i), 'YData', X(6,i));
 
-<<<<<<< HEAD
-   
-=======
     % Add current points to traces
->>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
     addpoints(trace1, X(1,i), X(2,i));
     addpoints(trace2, X(3,i), X(4,i));
     addpoints(trace3, X(5,i), X(6,i));

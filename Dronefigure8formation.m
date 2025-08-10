@@ -15,8 +15,11 @@ t = 0:dt:T;
 N = length(t);
 
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> fe7462a2be805d614d23006e0757e81047229a9c
 % Initial states: [x1; y1; x1dot; y1dot; x2; y2; x2dot; y2dot; x3; y3; x3dot; y3dot]
 
 X = zeros(6, N);
