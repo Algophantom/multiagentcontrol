@@ -19,13 +19,13 @@ udot    = zeros(6, 1);
 % --- Formation parameters
 d1 = 5;
 d2 = 50;
-v_lead = [30; 30];%speed of the leader
+v_lead = [1; 1];%speed of the leader
 r      = v_lead .* t;
 
 % --- Obstacles: centres in columns, radii in array
-obstacle_pos = [ 49   120  253;
-                 50  80  242];    % 3 obstacles
-r_obs        = [10 10 10];     % radii
+obstacle_pos = [ 48   100  200;
+                 50  100  200];    % 3 obstacles
+r_obs        = [5 10 10];     % radii
 n_obs        = size(obstacle_pos,2);
 
 % --- Avoidance parameters
@@ -35,10 +35,9 @@ avoid_state1 = [0;0];
 avoid_state2 = [0;0];
 avoid_state3 = [0;0];
 
-beta_self   = 0.98;
-beta_leader = 0.02;
-c_avoid     = 2e3 ;
-c_avoid_2   = 1e3;
+beta_self   = 0.95;
+beta_leader = 0.05;
+k_avoid     = 50;
 
 % --- Simulation loop
 for i = 1:N-1
@@ -51,7 +50,7 @@ for i = 1:N-1
     (X(4,i) - X(6,i))        
 ];
 
-    udot        = 1*u_dash - 2*u(3:6,i);
+    udot        = 5*u_dash - 2*u(3:6,i);
     u(3:6,i+1)  = u(3:6,i) + dt*udot;
 
     % Positions
@@ -67,12 +66,10 @@ for i = 1:N-1
     avoid2 = beta_self*self2 + beta_leader*avoid1;
     avoid3 = beta_self*self3 + beta_leader*avoid1;
 
-   
-
     % Leader velocity
-    u(1:2,i+1) = v_des + c_avoid*avoid1;
+    u(1:2,i+1) = v_des + k_avoid*avoid1;
     % Follower velocities
-    u(3:6,i+1) = u(3:6,i+1) + c_avoid_2*[avoid2; avoid3];
+    u(3:6,i+1) = u(3:6,i+1) + k_avoid*[avoid2; avoid3];
 
     % Integrate positions
     X(1:2,i+1) = X(1:2,i) + dt*u(1:2,i+1);
@@ -88,19 +85,16 @@ function [avoid_vel, avoid_state] = multi_obsavoidance(pos, obs_pos, r_obs, avoi
     for j = 1:n_obs
         av = pos - obs_pos(:,j);
         d  = norm(av);
-        safety=10;
-        if d < (r_obs(j) + safety)
+        if d < r_obs(j)
             dir        = av / d;
-            overlap    = (r_obs(j)+safety - d) * dir;
-            damping = 0.6;
-            avoid_state= (damping)*avoid_state + dt * (k/m) * overlap;
+            overlap    = (r_obs(j) - d) * dir;
+            avoid_state= avoid_state + dt * (k/m) * overlap;
             total_avoid= total_avoid + avoid_state;
         end
     end
 
     if all(total_avoid==0)
-        avoid_state = 0.2 * avoid_state;
-        total_avoid = avoid_state;
+        avoid_state = [0;0];
     end
     avoid_vel = total_avoid;
 end

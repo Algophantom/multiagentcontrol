@@ -31,13 +31,13 @@ v_lead = [1; 5];
 r = v_lead .* t;
 
 % --- Obstacle
-obstacle_pos = [200; 100];   % fixed obstacle
-r_obs = 15;                  % radius
-k = 1; m = 3.5;              % NI virtual spring params
+obstacle_pos = [10; 50];   % fixed obstacle
+r_obs = 5;                  % radius
+k = 0.5; m = 1;              % NI virtual spring params
 
 % Avoidance internal states
 avoid_state1 = [0;0]; avoid_state2 = [0;0]; avoid_state3 = [0;0];
-beta_self=0.7; beta_leader=0.3;
+beta_self=0.7; beta_leader=0.8;
 
 for i=1:N-1
     % Leader follows reference directly

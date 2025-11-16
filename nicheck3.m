@@ -8,10 +8,10 @@ t  = 0:dt:T;
 N  = numel(t);
 
 %% Params
-l        = 1;            
-c_avoid    = 2e4;            
+l        = 1;            % look-ahead distance (m)
+c_avoid    = 10000;            % scale for obstacle-avoidance virtual velocity (on \tilde p)
 
-obstacle_pos = [  53  120  235 ;
+obstacle_pos = [  53  120  240 ;
                    50   80  242 ];
 r_obs        = [  20   10   50 ];
 n_obs        = size(obstacle_pos,2);
@@ -27,7 +27,7 @@ X(:,1)  = [-50; -50; 0;   -55; 55; 0;   -60; 60; 0];  % initial poses
 % logs
 v  = zeros(3, N);            % linear speeds
 w  = zeros(3, N);            % angular speeds
-u  = zeros(6, N);            
+u  = zeros(6, N);            % virtual input on \tilde p: [u1x;u1y;u2x;u2y;u3x;u3y]
 
 
 avoid_state1 = [0;0];
@@ -54,7 +54,7 @@ for k = 1:N-1
     [avoid2, avoid_state2, on2] = multi_obsavoidance(p2, obstacle_pos, r_obs, avoid_state2, k_spring, m_mass, dt);
     [avoid3, avoid_state3, on3] = multi_obsavoidance(p3, obstacle_pos, r_obs, avoid_state3, k_spring, m_mass, dt);
     
-    udot        = 100*u_dash - 20*u(:,k);
+    udot        = 9*u_dash - 18*u(:,k);
     u(:,k+1)  = u(:,k) + dt*udot;
 
     
@@ -145,21 +145,20 @@ for k = 1:N
     drawnow limitrate;
 end
 
-%% Obstacle-avoidance helper 
+%% Obstacle-avoidance helper (NI "spring-damper" in discrete-time)
 function [avoid_vel, avoid_state, avoid_active] = multi_obsavoidance(pos, obs_pos, r_obs, avoid_state, k, m, dt)
     n_obs = size(obs_pos,2);
     total_avoid  = [0;0];
     avoid_active = false;
-    safety       = 20;                  
+    safety       = 20;                   % safety margin
     for j = 1:n_obs
-        av = pos - obs_pos(:,j);
+        av = pos - obs_pos(:,j);% vector points from obstacle center to the robot, outwards
         d  = norm(av);
         if d < (r_obs(j) + safety)
             avoid_active = true;
             dir      = (av) / d;
-            overlap  = (r_obs(j)+safety - d) * dir;     
-            %avoid_state =  avoid_state + dt*(k/m) * overlap;         % NI model (discrete)
-            avoid_state =  0.1*avoid_state + dt*(k/m) * overlap;
+            overlap  = (r_obs(j)+safety - d) * dir;     % overlap vector
+            avoid_state = 0.1*(1-dt)*avoid_state + dt*(k/m) * overlap;         % NI model (discrete)
             total_avoid = total_avoid + avoid_state;
         end
     end

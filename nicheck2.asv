@@ -1,0 +1,3 @@
+s=tf('s');
+g=()
+nyquist(g)
